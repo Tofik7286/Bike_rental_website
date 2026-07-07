@@ -100,13 +100,13 @@ export default function Navbar() {
 
       {/* Mobile Menu Overlay */}
       <div
-        className={`lg:hidden fixed inset-0 top-[76px] bg-white/95 backdrop-blur-xl transition-all duration-300 ${
+        className={`lg:hidden absolute left-0 right-0 top-[76px] h-[calc(100vh-76px)] overflow-y-auto bg-white/95 backdrop-blur-xl transition-all duration-300 ${
           mobileOpen
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none'
         }`}
       >
-        <div className="flex flex-col items-center pt-14 gap-8">
+        <div className="flex flex-col items-center pt-14 pb-28 gap-8 min-h-max">
           {navLinks.map((link) => (
             <a
               key={link.label}

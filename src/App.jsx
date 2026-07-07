@@ -13,7 +13,22 @@ import CustomerAuth from './components/CustomerAuth';
 import MobileBottomNav from './components/MobileBottomNav';
 import StaffAdminLogin from './components/StaffAdminLogin';
 import WalkInBooking from './components/WalkInBooking';
+import UserProfile from './components/UserProfile';
+import FleetPage from './components/FleetPage';
 import { RentalProvider } from './context/RentalContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+// Protected Route for Customers
+const ProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
 
 function AppShell() {
   const location = useLocation();
@@ -49,9 +64,13 @@ function AppShell() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/fleet" element={<FleetPage />} />
           <Route path="/login" element={<CustomerAuth />} />
-          <Route path="/book/:bikeId" element={<BikeCheckout />} />
-          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+          
+          {/* Protected Customer Routes */}
+          <Route path="/book/:bikeId" element={<ProtectedRoute><BikeCheckout /></ProtectedRoute>} />
+          <Route path="/customer/dashboard" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
           
           {/* Internal Login Route */}
           <Route path="/internal-login" element={<StaffAdminLogin onLogin={setInternalAuth} />} />
@@ -75,11 +94,13 @@ function AppShell() {
 
 function App() {
   return (
-    <RentalProvider>
-      <Router>
-        <AppShell />
-      </Router>
-    </RentalProvider>
+    <AuthProvider>
+      <RentalProvider>
+        <Router>
+          <AppShell />
+        </Router>
+      </RentalProvider>
+    </AuthProvider>
   );
 }
 

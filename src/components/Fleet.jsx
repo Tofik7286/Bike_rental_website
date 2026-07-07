@@ -98,14 +98,14 @@ export default function Fleet() {
 
         {/* View All CTA */}
         <div className="text-center mt-[50px]">
-          <a
-            href="#fleet"
+          <Link
+            to="/fleet"
             id="fleet-view-all"
             className="inline-flex items-center gap-2 font-['Manrope'] font-semibold text-[15px] text-[#1C1917] border-b-2 border-[#FBBF24] pb-1 hover:text-[#F59E0B] transition-colors duration-200"
           >
             View All Bikes
             <ArrowRight size={16} />
-          </a>
+          </Link>
         </div>
       </div>
     </section>

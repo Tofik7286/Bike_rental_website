@@ -3,8 +3,16 @@ import { mockFleet, mockBookings } from '../data/mockDatabase';
 
 const RentalContext = createContext();
 
+const FLEET_VERSION = '3'; // Bump this when mockDatabase.js changes
+
 export function RentalProvider({ children }) {
   const [fleet, setFleet] = useState(() => {
+    const savedVersion = localStorage.getItem('ride_fleet_version');
+    if (savedVersion !== FLEET_VERSION) {
+      localStorage.removeItem('ride_fleet');
+      localStorage.setItem('ride_fleet_version', FLEET_VERSION);
+      return mockFleet;
+    }
     const saved = localStorage.getItem('ride_fleet');
     return saved ? JSON.parse(saved) : mockFleet;
   });

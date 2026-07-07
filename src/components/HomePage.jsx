@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Bike, Smartphone, Navigation, ShieldCheck, BadgeCheck, Sparkles, CalendarDays, Clock, MapPin, Star } from 'lucide-react';
 import { useRental } from '../context/RentalContext';
 
@@ -21,6 +21,7 @@ const TIME_SLOTS = generateTimeSlots();
 
 export default function HomePage() {
   const { fleet } = useRental();
+  const navigate = useNavigate();
   const availableBikes = fleet.filter((b) => b.status === 'Available').slice(0, 3);
 
   // Booking widget state
@@ -31,8 +32,13 @@ export default function HomePage() {
   const [dropoffTime, setDropoffTime] = useState('18:00');
 
   const handleSearch = () => {
-    const fleetSection = document.getElementById('fleet');
-    if (fleetSection) fleetSection.scrollIntoView({ behavior: 'smooth' });
+    const params = new URLSearchParams({
+      pickupDate,
+      pickupTime,
+      dropoffDate,
+      dropoffTime,
+    });
+    navigate(`/fleet?${params.toString()}`);
   };
 
   return (
@@ -274,13 +280,13 @@ export default function HomePage() {
                 The Fleet
               </h2>
             </div>
-            <a
-              href="#fleet"
+            <Link
+              to="/fleet"
               className="font-['Manrope'] font-semibold text-[15px] text-[#1C1917] border-b-2 border-[#FBBF24] pb-1 hover:text-[#F59E0B] transition-colors duration-200 flex items-center gap-2 self-start md:self-auto"
             >
               View All Bikes
               <ArrowRight size={16} />
-            </a>
+            </Link>
           </div>
 
           {/* Fleet Cards — large premium layout */}

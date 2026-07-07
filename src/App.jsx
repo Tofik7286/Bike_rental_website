@@ -1,0 +1,87 @@
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { useState } from 'react';
+import Navbar from './components/Navbar';
+import HomePage from './components/HomePage';
+import Footer from './components/Footer';
+import BikeCheckout from './components/BikeCheckout';
+import CustomerDashboard from './components/CustomerDashboard';
+import StaffReturnFlow from './components/StaffReturnFlow';
+import StaffDashboard from './components/StaffDashboard';
+import VerifyHandover from './components/VerifyHandover';
+import SuperAdminPanel from './components/SuperAdminPanel';
+import CustomerAuth from './components/CustomerAuth';
+import MobileBottomNav from './components/MobileBottomNav';
+import StaffAdminLogin from './components/StaffAdminLogin';
+import WalkInBooking from './components/WalkInBooking';
+import { RentalProvider } from './context/RentalContext';
+
+function AppShell() {
+  const location = useLocation();
+  const isStaffRoute = location.pathname.startsWith('/staff');
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isInternalLoginRoute = location.pathname === '/internal-login';
+  
+  const showNavAndFooter = !isStaffRoute && !isAdminRoute && !isInternalLoginRoute;
+  const showBottomNav = !isAdminRoute && !isInternalLoginRoute && !isStaffRoute;
+  const mobileRole = 'customer'; // Internal staff use their own UI, bottom nav is only for customers now
+
+  const [internalAuth, setInternalAuth] = useState(null); // 'staff' | 'admin' | null
+
+  // Protected Route Wrappers
+  const ProtectedStaffRoute = ({ children }) => {
+    if (internalAuth !== 'staff' && internalAuth !== 'admin') {
+      return <Navigate to="/internal-login" replace />;
+    }
+    return children;
+  };
+
+  const ProtectedAdminRoute = ({ children }) => {
+    if (internalAuth !== 'admin') {
+      return <Navigate to="/internal-login" replace />;
+    }
+    return children;
+  };
+
+  return (
+    <div className={`min-h-screen flex flex-col ${showNavAndFooter ? 'bg-[#FFFDF8]' : 'bg-[#1C1917]'}`}>
+      {showNavAndFooter && <Navbar />}
+      <main className={`flex-1 ${showBottomNav ? 'pb-[72px] md:pb-0' : ''}`}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<CustomerAuth />} />
+          <Route path="/book/:bikeId" element={<BikeCheckout />} />
+          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+          
+          {/* Internal Login Route */}
+          <Route path="/internal-login" element={<StaffAdminLogin onLogin={setInternalAuth} />} />
+
+          {/* Protected Staff Routes */}
+          <Route path="/staff" element={<ProtectedStaffRoute><StaffDashboard /></ProtectedStaffRoute>} />
+          <Route path="/staff/dashboard" element={<ProtectedStaffRoute><StaffDashboard /></ProtectedStaffRoute>} />
+          <Route path="/staff/walk-in" element={<ProtectedStaffRoute><WalkInBooking /></ProtectedStaffRoute>} />
+          <Route path="/staff/pickup" element={<ProtectedStaffRoute><VerifyHandover /></ProtectedStaffRoute>} />
+          <Route path="/staff/return" element={<ProtectedStaffRoute><StaffReturnFlow /></ProtectedStaffRoute>} />
+          
+          {/* Protected Admin Routes */}
+          <Route path="/admin/dashboard" element={<ProtectedAdminRoute><SuperAdminPanel /></ProtectedAdminRoute>} />
+        </Routes>
+      </main>
+      {showNavAndFooter && <Footer />}
+      {showBottomNav && <MobileBottomNav userRole={mobileRole} />}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <RentalProvider>
+      <Router>
+        <AppShell />
+      </Router>
+    </RentalProvider>
+  );
+}
+
+export default App;
+

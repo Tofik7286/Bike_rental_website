@@ -3,7 +3,7 @@ import { mockFleet, mockBookings } from '../data/mockDatabase';
 
 const RentalContext = createContext();
 
-const FLEET_VERSION = '3'; // Bump this when mockDatabase.js changes
+const FLEET_VERSION = '4'; // Bump this when mockDatabase.js changes
 
 export function RentalProvider({ children }) {
   const [fleet, setFleet] = useState(() => {
@@ -97,6 +97,24 @@ export function RentalProvider({ children }) {
     });
   };
 
+  const addVehicle = (vehicle) => {
+    const newVehicle = {
+      id: vehicle.id || `V-${String(fleet.length + 1).padStart(3, '0')}`,
+      make: vehicle.make,
+      model: vehicle.model,
+      number_plate: vehicle.number_plate,
+      daily_rate: Number(vehicle.daily_rate),
+      status: 'Available',
+      location: vehicle.location || 'Ahmedabad Hub',
+      rating: 5.0,
+      image_url: vehicle.image_url || '/images/bike-gt650.png',
+      category: vehicle.category,
+      tag: vehicle.tag || 'New',
+    };
+    setFleet((prev) => [...prev, newVehicle]);
+    return newVehicle;
+  };
+
   return (
     <RentalContext.Provider
       value={{
@@ -108,6 +126,7 @@ export function RentalProvider({ children }) {
         updateBikeStatus,
         activateBooking,
         completeBooking,
+        addVehicle,
       }}
     >
       {children}

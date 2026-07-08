@@ -389,7 +389,7 @@ export default function Checkout() {
                 <img
                   src={bike.image_url}
                   alt={`${bike.make} ${bike.model}`}
-                  className="w-20 h-20 object-cover rounded-[10px] bg-[#F5F5F4]"
+                  className="w-20 h-20 object-contain p-2 rounded-[10px] bg-white border border-[#E7E5E4]/50"
                 />
                 <div className="flex flex-col">
                   <span className="font-['Space_Grotesk'] font-bold text-[18px] text-[#1C1917]">

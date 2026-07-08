@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   MapPin,
@@ -42,6 +42,16 @@ export default function FleetPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [maxPriceFilter, setMaxPriceFilter] = useState(1500);
+  const [activeTag, setActiveTag] = useState('all');
+  const [sortBy, setSortBy] = useState('default');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+  // Lock body scroll when filter drawer is open
+  useEffect(() => {
+    document.body.style.overflow = isFilterDrawerOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isFilterDrawerOpen]);
 
   // Read booking params from URL
   const pickupDate = searchParams.get('pickupDate') || '';
@@ -69,7 +79,7 @@ export default function FleetPage() {
     ? `?pickupDate=${pickupDate}&pickupTime=${pickupTime}&dropoffDate=${dropoffDate}&dropoffTime=${dropoffTime}`
     : '';
 
-  // Filter logic
+  // Filter & Sort logic
   const filteredFleet = fleet.filter((bike) => {
     const matchesCategory =
       activeFilter === 'all' || bike.category === activeFilter;
@@ -78,10 +88,27 @@ export default function FleetPage() {
       `${bike.make} ${bike.model}`
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    
+    // Dynamic price validation
+    const matchesPrice = bike.daily_rate <= maxPriceFilter;
+
+    const matchesTag =
+      activeTag === 'all' || bike.tag === activeTag;
+
+    return matchesCategory && matchesSearch && matchesPrice && matchesTag;
   });
 
-  const availableCount = filteredFleet.filter(
+  // Apply sorting to a new array reference to prevent mutating context directly
+  const sortedFleet = [...filteredFleet];
+  if (sortBy === 'priceAsc') {
+    sortedFleet.sort((a, b) => a.daily_rate - b.daily_rate);
+  } else if (sortBy === 'priceDesc') {
+    sortedFleet.sort((a, b) => b.daily_rate - a.daily_rate);
+  } else if (sortBy === 'ratingDesc') {
+    sortedFleet.sort((a, b) => b.rating - a.rating);
+  }
+
+  const availableCount = sortedFleet.filter(
     (b) => b.status === 'Available'
   ).length;
 
@@ -202,32 +229,45 @@ export default function FleetPage() {
       {/* ────────────────────────────────────────────── */}
       <div className="max-w-[1320px] mx-auto px-6 w-full">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 py-6 -mt-6 md:-mt-8 relative z-20">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search
-              size={16}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A8A29E]"
-            />
-            <input
-              type="text"
-              placeholder="Search bikes… e.g. Royal Enfield, Activa"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-[#E7E5E4] rounded-full pl-11 pr-4 py-3 text-[14px] font-['Manrope'] font-medium text-[#1C1917] placeholder:text-[#A8A29E] outline-none transition-all duration-200 focus:border-[#1C1917] focus:ring-2 focus:ring-[#1C1917]/10 shadow-sm"
-            />
+          {/* Search & Mobile Filter Trigger */}
+          <div className="flex items-center gap-2 flex-1 max-w-full md:max-w-md">
+            <div className="relative flex-1">
+              <Search
+                size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A8A29E]"
+              />
+              <input
+                type="text"
+                placeholder="Search bikes… e.g. Royal Enfield"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-[#E7E5E4] rounded-full pl-11 pr-4 py-3 text-[14px] font-['Manrope'] font-medium text-[#1C1917] placeholder:text-[#A8A29E] outline-none transition-all duration-200 focus:border-[#1C1917] focus:ring-2 focus:ring-[#1C1917]/10 shadow-sm"
+              />
+            </div>
+            
+            {/* Filter Trigger Button */}
+            <button
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-white border border-[#E7E5E4] rounded-full text-[14px] font-semibold text-[#1C1917] hover:border-[#1C1917] transition-all shadow-sm cursor-pointer select-none relative"
+            >
+              <SlidersHorizontal size={16} className="text-[#57534E]" />
+              <span>Filters</span>
+              {(maxPriceFilter < 1500 || activeTag !== 'all' || sortBy !== 'default') && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#FBBF24] border-2 border-white rounded-full" />
+              )}
+            </button>
           </div>
 
-          {/* Filter Buttons */}
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal size={16} className="text-[#A8A29E] mr-1" />
+          {/* Category Filter Pills (Horizontal scroll on mobile) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none -mx-6 px-6 md:mx-0 md:px-0 select-none">
             {filters.map((f) => (
               <button
                 key={f.key}
                 onClick={() => setActiveFilter(f.key)}
-                className={`px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all duration-200 cursor-pointer ${
+                className={`px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all duration-200 whitespace-nowrap cursor-pointer ${
                   activeFilter === f.key
                     ? 'bg-[#1C1917] text-white shadow-md'
-                    : 'bg-white text-[#57534E] border border-[#E7E5E4] hover:border-[#1C1917] hover:text-[#1C1917]'
+                    : 'bg-white text-[#57534E] border border-[#E7E5E4] hover:border-[#1C1917]'
                 }`}
               >
                 {f.label}
@@ -254,7 +294,7 @@ export default function FleetPage() {
         {/* ────────────────────────────────────────────── */}
         {/*  Fleet Grid                                    */}
         {/* ────────────────────────────────────────────── */}
-        {filteredFleet.length === 0 ? (
+        {sortedFleet.length === 0 ? (
           <div className="text-center py-20">
             <Search size={48} className="mx-auto text-[#E7E5E4] mb-4" />
             <h3 className="font-['Space_Grotesk'] font-bold text-[22px] text-[#1C1917]">
@@ -266,7 +306,7 @@ export default function FleetPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[28px]">
-            {filteredFleet.map((bike) => {
+            {sortedFleet.map((bike) => {
               const isAvailable = bike.status === 'Available';
 
               return (
@@ -277,11 +317,11 @@ export default function FleetPage() {
                   }`}
                 >
                   {/* Image */}
-                  <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#F5F5F4]">
+                  <div className="relative w-full aspect-[4/3] overflow-hidden bg-white">
                     <img
                       src={bike.image_url}
                       alt={`${bike.make} ${bike.model}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
                     />
 
                     {/* Tag Badge */}
@@ -402,6 +442,143 @@ export default function FleetPage() {
             })}
           </div>
         )}
+      </div>
+
+      {/* ────────────────────────────────────────────── */}
+      {/*  Filter Drawer (Mobile-First Slide-out Drawer) */}
+      {/* ────────────────────────────────────────────── */}
+      <div
+        className={`fixed inset-0 z-50 transition-all duration-300 ${
+          isFilterDrawerOpen
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Backdrop overlay */}
+        <div
+          onClick={() => setIsFilterDrawerOpen(false)}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+        />
+
+        {/* Drawer Panel */}
+        <div
+          className={`absolute right-0 top-0 bottom-0 w-full max-w-[400px] bg-[#FFFDF8] shadow-2xl transition-transform duration-300 flex flex-col ${
+            isFilterDrawerOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-5 border-b border-[#E7E5E4] bg-white">
+            <h2 className="font-['Space_Grotesk'] font-bold text-[20px] text-[#1C1917] flex items-center gap-2">
+              <SlidersHorizontal size={18} />
+              Filter & Sort
+            </h2>
+            <button
+              onClick={() => setIsFilterDrawerOpen(false)}
+              className="p-2 text-[#A8A29E] hover:text-[#1C1917] hover:bg-[#F5F5F4] rounded-full transition-all cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Drawer content (scrollable) */}
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8">
+            {/* Sort options */}
+            <div className="flex flex-col gap-3">
+              <span className="text-[11px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Sort By</span>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { key: 'default', label: 'Default' },
+                  { key: 'priceAsc', label: 'Price: Low to High' },
+                  { key: 'priceDesc', label: 'Price: High to Low' },
+                  { key: 'ratingDesc', label: 'Rating: High to Low' },
+                ].map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setSortBy(option.key)}
+                    className={`px-4 py-3 rounded-[12px] text-[13px] font-semibold text-left border transition-all cursor-pointer select-none ${
+                      sortBy === option.key
+                        ? 'border-[#1C1917] bg-[#1C1917] text-white shadow-sm'
+                        : 'border-[#E7E5E4] bg-white text-[#57534E] hover:border-[#1C1917]'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Price slider */}
+            <div className="flex flex-col gap-3 bg-white p-5 rounded-[18px] border border-[#E7E5E4]">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1 select-none">
+                <span>Max Price / Day</span>
+                <span className="text-[#1C1917] font-extrabold text-[13px] normal-case bg-[#FEF3C7] px-2.5 py-0.5 rounded-full border border-[#FBBF24]/30">₹{maxPriceFilter}</span>
+              </div>
+              <input
+                type="range"
+                min="300"
+                max="1500"
+                step="50"
+                value={maxPriceFilter}
+                onChange={(e) => setMaxPriceFilter(Number(e.target.value))}
+                className="w-full accent-[#FBBF24] bg-[#F5F5F4] h-1.5 rounded-lg appearance-none cursor-pointer mt-3 focus:outline-none"
+              />
+              <div className="flex justify-between text-[10px] text-[#A8A29E] font-bold px-1 mt-1">
+                <span>Min: ₹300</span>
+                <span>Max: ₹1,500</span>
+              </div>
+            </div>
+
+            {/* Collections / Tags Grid */}
+            <div className="flex flex-col gap-3">
+              <span className="text-[11px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Collections & Tags</span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'all', label: 'All Collections' },
+                  { key: 'Popular', label: 'Popular' },
+                  { key: 'Trending', label: 'Trending' },
+                  { key: 'Premium', label: 'Premium' },
+                  { key: 'Sport', label: 'Sport' },
+                  { key: 'Electric', label: 'Electric' },
+                  { key: 'Best Value', label: 'Best Value' },
+                ].map((tag) => (
+                  <button
+                    key={tag.key}
+                    type="button"
+                    onClick={() => setActiveTag(tag.key)}
+                    className={`px-4 py-2.5 rounded-full text-[13px] font-semibold border transition-all cursor-pointer select-none ${
+                      activeTag === tag.key
+                        ? 'border-[#1C1917] bg-[#1C1917] text-white shadow-sm'
+                        : 'border-[#E7E5E4] bg-white text-[#57534E] hover:border-[#1C1917]'
+                    }`}
+                  >
+                    {tag.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer controls */}
+          <div className="p-6 border-t border-[#E7E5E4] bg-white flex items-center justify-between gap-4">
+            <button
+              onClick={() => {
+                setMaxPriceFilter(1500);
+                setActiveTag('all');
+                setSortBy('default');
+              }}
+              className="text-[13px] font-bold text-[#57534E] hover:text-[#1C1917] transition-colors underline cursor-pointer select-none"
+            >
+              Clear All
+            </button>
+            <button
+              onClick={() => setIsFilterDrawerOpen(false)}
+              className="flex-1 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#1C1917] font-semibold text-[14px] py-3.5 px-6 rounded-full shadow-[0_4px_14px_rgba(251,191,36,0.3)] transition-all cursor-pointer text-center select-none"
+            >
+              Show {sortedFleet.length} Results
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

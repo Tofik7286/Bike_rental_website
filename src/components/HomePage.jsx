@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Bike, Smartphone, Navigation, ShieldCheck, BadgeCheck, Sparkles, CalendarDays, Clock, MapPin, Star } from 'lucide-react';
 import { useRental } from '../context/RentalContext';
 
-// ─── Helper: generate time options restricted 10:00 AM → 12:00 AM ───
+// ─── Helper: generate time slots 6:00 AM → 12:00 AM (midnight) ───
 function generateTimeSlots() {
   const slots = [];
-  for (let h = 10; h <= 23; h++) {
+  for (let h = 6; h <= 23; h++) {
     const period = h >= 12 ? 'PM' : 'AM';
-    const display = h > 12 ? h - 12 : h;
+    const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
     slots.push({ value: `${String(h).padStart(2, '0')}:00`, label: `${display}:00 ${period}` });
     slots.push({ value: `${String(h).padStart(2, '0')}:30`, label: `${display}:30 ${period}` });
   }
@@ -19,17 +19,77 @@ function generateTimeSlots() {
 
 const TIME_SLOTS = generateTimeSlots();
 
+// ─── Helper: get next 30-min slot from current time ───
+function getSmartDefaults() {
+  const now = new Date();
+
+  // Round up to next 30-min boundary
+  const mins = now.getMinutes();
+  let pickupHour = now.getHours();
+  let pickupMin;
+
+  if (mins < 30) {
+    pickupMin = 30;
+  } else {
+    pickupMin = 0;
+    pickupHour += 1;
+  }
+
+  // Handle midnight/day rollover if pickupHour becomes 24
+  let dayOffset = 0;
+  if (pickupHour >= 24) {
+    pickupHour = 6; // Reset to 6:00 AM next day
+    pickupMin = 0;
+    dayOffset = 1;
+  }
+
+  const pickupTime = new Date(now);
+  pickupTime.setDate(now.getDate() + dayOffset);
+  pickupTime.setHours(pickupHour, pickupMin, 0, 0);
+
+  // If before 6 AM, set to 6 AM today
+  if (pickupTime.getHours() < 6 && dayOffset === 0) {
+    pickupTime.setHours(6, 0, 0, 0);
+  }
+
+  // Drop-off = exactly 24 hours after pickup
+  const dropoffTime = new Date(pickupTime.getTime() + 24 * 60 * 60 * 1000);
+
+  // Helpers to get local ISO string and time string
+  const getLocalDateString = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getLocalTimeString = (d) => {
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${mins}`;
+  };
+
+  const todayStr = getLocalDateString(now);
+  const pickupDateStr = getLocalDateString(pickupTime);
+  const pickupTimeStr = getLocalTimeString(pickupTime);
+  const dropoffDateStr = getLocalDateString(dropoffTime);
+  const dropoffTimeStr = getLocalTimeString(dropoffTime);
+
+  return { pickupDateStr, pickupTimeStr, dropoffDateStr, dropoffTimeStr, todayStr };
+}
+
 export default function HomePage() {
   const { fleet } = useRental();
   const navigate = useNavigate();
   const availableBikes = fleet.filter((b) => b.status === 'Available').slice(0, 3);
 
-  // Booking widget state
-  const today = new Date().toISOString().split('T')[0];
-  const [pickupDate, setPickupDate] = useState(today);
-  const [dropoffDate, setDropoffDate] = useState(today);
-  const [pickupTime, setPickupTime] = useState('10:00');
-  const [dropoffTime, setDropoffTime] = useState('18:00');
+  // Smart booking defaults
+  const defaults = getSmartDefaults();
+  const today = defaults.todayStr;
+  const [pickupDate, setPickupDate] = useState(defaults.pickupDateStr);
+  const [dropoffDate, setDropoffDate] = useState(defaults.dropoffDateStr);
+  const [pickupTime, setPickupTime] = useState(defaults.pickupTimeStr);
+  const [dropoffTime, setDropoffTime] = useState(defaults.dropoffTimeStr);
 
   const handleSearch = () => {
     const params = new URLSearchParams({
@@ -298,11 +358,11 @@ export default function HomePage() {
                 className="group bg-white rounded-[16px] md:rounded-[20px] overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)] transition-all duration-300 flex flex-col"
               >
                 {/* Image */}
-                <div className="relative w-full aspect-[4/3] md:aspect-[4/3] overflow-hidden bg-[#E7E5E4]">
+                <div className="relative w-full aspect-[4/3] md:aspect-[4/3] overflow-hidden bg-white">
                   <img
                     src={bike.image_url}
                     alt={`${bike.make} ${bike.model}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
                   />
                   {/* Tag */}
                   {bike.tag && (

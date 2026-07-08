@@ -33,11 +33,11 @@ export default function Fleet() {
               className="bg-white rounded-[18px] shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:-translate-y-[6px] hover:shadow-[0_18px_40px_rgba(0,0,0,0.12)] transition-all duration-300 group overflow-hidden flex flex-col cursor-pointer"
             >
               {/* Image Container — fixed h-64 */}
-              <div className="relative w-full h-64 overflow-hidden">
+              <div className="relative w-full h-64 overflow-hidden bg-white">
                 <img
                   src={bike.image_url}
                   alt={`${bike.make} ${bike.model}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                 />
                 {/* Tag Badge */}
                 {bike.tag && (

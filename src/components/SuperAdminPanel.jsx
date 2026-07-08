@@ -12,12 +12,39 @@ import {
   TrendingUp, 
   CheckCircle,
   AlertTriangle,
-  Wrench
+  Wrench,
+  X
 } from 'lucide-react';
 
+const IMAGE_OPTIONS = [
+  { value: '/images/Royal Enfield Classic 350.webp', label: 'Royal Enfield Classic 350' },
+  { value: '/images/Royal Enfield Hunter 350.webp', label: 'Royal Enfield Hunter 350' },
+  { value: '/images/Royal Enfield Continental GT 650.webp', label: 'Royal Enfield Continental GT 650' },
+  { value: '/images/Bajaj Pulsar NS200.webp', label: 'Bajaj Pulsar NS200' },
+  { value: '/images/TVS Apache RTR 160 4V.webp', label: 'TVS Apache RTR 160 4V' },
+  { value: '/images/Yamaha MT-15 V2.webp', label: 'Yamaha MT-15 V2' },
+  { value: '/images/Hero Splendor Plus.webp', label: 'Hero Splendor Plus' },
+  { value: '/images/Honda CB350.webp', label: 'Honda CB350' },
+  { value: '/images/Honda Activa 6G.webp', label: 'Honda Activa 6G' },
+  { value: '/images/TVS Jupiter 125.webp', label: 'TVS Jupiter 125' },
+  { value: '/images/Suzuki Access 125.webp', label: 'Suzuki Access 125' },
+  { value: '/images/Ather 450X.webp', label: 'Ather 450X' }
+];
+
 export default function SuperAdminPanel() {
-  const { fleet, bookings, updateBikeStatus } = useRental();
+  const { fleet, bookings, updateBikeStatus, addVehicle } = useRental();
   const [activeTab, setActiveTab] = useState('fleet'); // 'dashboard', 'fleet', 'bookings', 'settings'
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Form states for adding new vehicle
+  const [make, setMake] = useState('');
+  const [model, setModel] = useState('');
+  const [numberPlate, setNumberPlate] = useState('');
+  const [dailyRate, setDailyRate] = useState('');
+  const [category, setCategory] = useState('Motorcycle');
+  const [tag, setTag] = useState('New');
+  const [location, setLocation] = useState('Ahmedabad Hub');
+  const [imageUrl, setImageUrl] = useState('/images/Royal Enfield Classic 350.webp');
 
   // Calculations for stats
   const totalBikes = fleet.length;
@@ -33,7 +60,62 @@ export default function SuperAdminPanel() {
   };
 
   const handleAddNewVehicle = () => {
-    alert('Add New Vehicle feature clicked! (Mock alert for prototype validation)');
+    setIsModalOpen(true);
+  };
+
+  // Convert uploaded image file to client-side base64 Data URL
+  const handleImageUploadChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file (PNG, JPG, WEBP).');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!make.trim() || !model.trim() || !numberPlate.trim() || !dailyRate) {
+      alert('Please fill out all required fields.');
+      return;
+    }
+
+    // Auto-generate proper sequential IDs based on category prefix (B for motorcycle, S for scooter)
+    const prefix = category === 'Motorcycle' ? 'B' : 'S';
+    const existingOfCategory = fleet.filter(b => b.id.startsWith(prefix));
+    const nextNum = existingOfCategory.length + 1;
+    const generatedId = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+
+    addVehicle({
+      id: generatedId,
+      make: make.trim(),
+      model: model.trim(),
+      number_plate: numberPlate.trim().toUpperCase(),
+      daily_rate: Number(dailyRate),
+      category,
+      tag,
+      location,
+      image_url: imageUrl
+    });
+
+    // Clear form states
+    setMake('');
+    setModel('');
+    setNumberPlate('');
+    setDailyRate('');
+    setCategory('Motorcycle');
+    setTag('New');
+    setLocation('Ahmedabad Hub');
+    setImageUrl('/images/Royal Enfield Classic 350.webp');
+
+    setIsModalOpen(false);
+    alert('✅ Vehicle added successfully to the fleet!');
   };
 
   return (
@@ -455,6 +537,243 @@ export default function SuperAdminPanel() {
           </div>
         )}
       </main>
+
+      {/* ────────────────────────────────────────────── */}
+      {/*  Add New Vehicle Modal                         */}
+      {/* ────────────────────────────────────────────── */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+          {/* Backdrop overlay */}
+          <div 
+            onClick={() => setIsModalOpen(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+          />
+
+          {/* Modal Container */}
+          <div className="relative w-full max-w-[500px] bg-[#FFFDF8] rounded-[24px] border border-[#E7E5E4] shadow-2xl p-6 md:p-8 flex flex-col gap-6 animate-[fadeSlideIn_0.3s_ease-out] z-10 max-h-[90vh] overflow-y-auto animate-duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="font-['Space_Grotesk'] font-bold text-[22px] text-[#1C1917] flex items-center gap-2">
+                <Plus size={22} className="text-[#FBBF24]" />
+                Add New Vehicle
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-[#A8A29E] hover:text-[#1C1917] hover:bg-[#F5F5F4] rounded-full transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
+              {/* Category selector */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Category *</span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {['Motorcycle', 'Scooter'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setCategory(cat);
+                        // Auto switch image type preset for convenience
+                        setImageUrl(cat === 'Motorcycle' 
+                          ? '/images/Royal Enfield Classic 350.webp' 
+                          : '/images/Honda Activa 6G.webp'
+                        );
+                      }}
+                      className={`py-2.5 rounded-full text-[13px] font-semibold transition-all cursor-pointer border text-center ${
+                        category === cat
+                          ? 'border-[#1C1917] bg-[#1C1917] text-white shadow-sm'
+                          : 'border-[#E7E5E4] bg-white text-[#57534E] hover:border-[#1C1917]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Make & Model */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Make / Brand *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Bajaj, TVS, Honda"
+                    value={make}
+                    onChange={(e) => setMake(e.target.value)}
+                    className="w-full bg-[#FAFAF9] border border-[#E7E5E4] rounded-full px-4 py-2.5 text-[13px] font-['Manrope'] font-medium text-[#1C1917] outline-none focus:border-[#1C1917] focus:ring-1 focus:ring-[#1C1917]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Model Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Pulsar NS200"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    className="w-full bg-[#FAFAF9] border border-[#E7E5E4] rounded-full px-4 py-2.5 text-[13px] font-['Manrope'] font-medium text-[#1C1917] outline-none focus:border-[#1C1917] focus:ring-1 focus:ring-[#1C1917]"
+                  />
+                </div>
+              </div>
+
+              {/* Number Plate & Daily Rate */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Number Plate *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. GJ-01-XX-9999"
+                    value={numberPlate}
+                    onChange={(e) => setNumberPlate(e.target.value)}
+                    className="w-full bg-[#FAFAF9] border border-[#E7E5E4] rounded-full px-4 py-2.5 text-[13px] font-['Manrope'] font-medium text-[#1C1917] outline-none focus:border-[#1C1917] focus:ring-1 focus:ring-[#1C1917]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Daily Rate (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    placeholder="e.g. 599"
+                    value={dailyRate}
+                    onChange={(e) => setDailyRate(e.target.value)}
+                    className="w-full bg-[#FAFAF9] border border-[#E7E5E4] rounded-full px-4 py-2.5 text-[13px] font-['Manrope'] font-medium text-[#1C1917] outline-none focus:border-[#1C1917] focus:ring-1 focus:ring-[#1C1917]"
+                  />
+                </div>
+              </div>
+
+              {/* Location & Tag */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Branch / Hub</label>
+                  <select
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-[#FAFAF9] border border-[#E7E5E4] rounded-full px-4 py-2.5 text-[13px] font-['Manrope'] font-medium text-[#57534E] outline-none cursor-pointer focus:border-[#1C1917]"
+                  >
+                    <option value="Ahmedabad Hub">Ahmedabad Hub</option>
+                    <option value="Mumbai Hub">Mumbai Hub</option>
+                    <option value="Bangalore Hub">Bangalore Hub</option>
+                    <option value="Pune Hub">Pune Hub</option>
+                    <option value="Delhi Hub">Delhi Hub</option>
+                    <option value="Jaipur Hub">Jaipur Hub</option>
+                    <option value="Chennai Hub">Chennai Hub</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1">Collection Tag</label>
+                  <select
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value)}
+                    className="w-full bg-[#FAFAF9] border border-[#E7E5E4] rounded-full px-4 py-2.5 text-[13px] font-['Manrope'] font-medium text-[#57534E] outline-none cursor-pointer focus:border-[#1C1917]"
+                  >
+                    <option value="New">New Arrival</option>
+                    <option value="Popular">Popular</option>
+                    <option value="Trending">Trending</option>
+                    <option value="Premium">Premium</option>
+                    <option value="Sport">Sport</option>
+                    <option value="Electric">Electric</option>
+                    <option value="Best Value">Best Value</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Image Input (Upload Custom Image) */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1 select-none">Vehicle Image *</span>
+                
+                <div className="flex gap-4 items-center bg-[#FAFAF9] p-4 rounded-[18px] border border-[#E7E5E4]">
+                  {/* Uploader Preview */}
+                  <div className="w-16 h-16 rounded-[12px] bg-white border border-[#E7E5E4] flex items-center justify-center overflow-hidden shrink-0">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt="Upload preview" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <Bike size={24} className="text-[#A8A29E]" />
+                    )}
+                  </div>
+                  
+                  {/* Input trigger */}
+                  <div className="flex-1 flex flex-col gap-1">
+                    <label className="w-fit bg-white hover:bg-[#F5F5F4] border border-[#E7E5E4] rounded-full px-4 py-2 text-[12px] font-bold text-[#57534E] cursor-pointer shadow-sm hover:border-[#1C1917] transition-all">
+                      Choose File...
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUploadChange}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-[10px] text-[#A8A29E] font-medium">PNG, JPG, WEBP (stored in local browser database)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preset Visual Gallery */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] font-bold text-[#A8A29E] uppercase tracking-wider pl-1 select-none">Or select from presets</span>
+                <div className="grid grid-cols-4 gap-2 max-h-[120px] overflow-y-auto p-2.5 bg-[#FAFAF9] rounded-[18px] border border-[#E7E5E4] scrollbar-thin">
+                  {IMAGE_OPTIONS.map((opt) => {
+                    const isSelected = imageUrl === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setImageUrl(opt.value)}
+                        className={`relative aspect-[4/3] bg-white rounded-[10px] overflow-hidden border-2 transition-all p-1 flex items-center justify-center cursor-pointer ${
+                          isSelected
+                            ? 'border-[#FBBF24] ring-2 ring-[#FBBF24]/20 shadow-md scale-95'
+                            : 'border-transparent hover:border-[#A8A29E]/30 bg-white shadow-sm'
+                        }`}
+                      >
+                        <img
+                          src={opt.value}
+                          alt={opt.label}
+                          className="w-full h-full object-contain"
+                        />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 bg-[#FBBF24] text-[#1C1917] w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm">
+                            <span className="text-[7px] font-black font-sans">✓</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[#E7E5E4]">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 border border-[#E7E5E4] hover:bg-[#F5F5F4] text-[#57534E] font-semibold text-[14px] py-3 rounded-full cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#1C1917] font-semibold text-[14px] py-3 rounded-full cursor-pointer transition-all shadow-[0_4px_14px_rgba(251,191,36,0.2)]"
+                >
+                  Add Vehicle
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          <style>{`
+            @keyframes fadeSlideIn {
+              from { opacity: 0; transform: translateY(12px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }
